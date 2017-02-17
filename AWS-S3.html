@@ -151,10 +151,21 @@
 
             });
 
+
+
+
+
+
             $(document).on("click","#setAwsCredentials", function(){
                 $("#AwsCredentials").toggle();
 
             });
+
+
+
+
+
+
 
             $(document).on("click","#btnLogin", function(){
 
@@ -163,16 +174,16 @@
                 var User_Email              = $("#inputEmail").val();
                 var User_Password           = $("#inputPassword").val();
                 
-                var AWS_Region              = $("#awsRegion").val();            // "ap-southeast-2";
+                //var AWS_Region              = $("#awsRegion").val();            // "ap-southeast-2";
                 var AWS_UserPoolId          = $("#awsUserPoolId").val();        // "ap-southeast-2_dntn23wyV"; // Your user pool id here
                 var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here
-                var AWS_IdentityPoolId      = $("#awsIdentityPoolId").val();    // "ap-southeast-2:631003c9-f817-42c8-a279-52c457cade89"; // your identity pool id here
-                var AWS_IdentityPoolIdKey   = 'cognito-idp.'+AWS_Region+'.amazonaws.com/'+AWS_UserPoolId; // Change the key below according to the specific region your user pool is in. 'cognito-idp.<region>.amazonaws.com/<YOUR_USER_POOL_ID>'
+                //var AWS_IdentityPoolId      = $("#awsIdentityPoolId").val();    // "ap-southeast-2:631003c9-f817-42c8-a279-52c457cade89"; // your identity pool id here
+                //var AWS_IdentityPoolIdKey   = 'cognito-idp.'+AWS_Region+'.amazonaws.com/'+AWS_UserPoolId; // Change the key below according to the specific region your user pool is in. 'cognito-idp.<region>.amazonaws.com/<YOUR_USER_POOL_ID>'
                 
 
                 /******* SIGN USER IN **********************************************************/
                 var authenticationData      = { Username : User_Email, Password : User_Password };// set username and password here
-                var UserPoolData                = { UserPoolId : AWS_UserPoolId, ClientId   : AWS_ClientId };
+                var UserPoolData            = { UserPoolId : AWS_UserPoolId, ClientId   : AWS_ClientId };
                 var userPool                = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(UserPoolData);      
                 var userData                = { Username : User_Email, Pool : userPool };
                 var authenticationDetails   = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authenticationData);  
@@ -183,6 +194,10 @@
 
                     /******* USER SIGN-IN SUCCESSFUL *******************************************/
                     onSuccess: function (result) {
+                            
+                            console.log("accessToken: "+JSON.stringify(result.accessToken));
+                            console.log("idToken: "+JSON.stringify(result.idToken));
+                            console.log("refreshToken: "+JSON.stringify(result.refreshToken));
 
                             var AWS_idToken             = result.getIdToken().getJwtToken();
 
@@ -192,7 +207,7 @@
                             
                             //  SUPER IMPORTANT! the following Key Value can never be dynamics due to JS constraints (prior  ES6)
                             var AWS_Logins = { 'cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_dntn23wyV' : AWS_idToken }
-
+                            
                             AWS.config.region      = AWS_Region;     
                             AWS.config.credentials = new AWS.CognitoIdentityCredentials({
                                     IdentityPoolId : AWS_IdentityPoolId, 
@@ -202,8 +217,19 @@
 
                             // ACCESS AWS SERVICES HERE....
 
+                            var AWS_bucketName  = 'hayden-event-app';
+                            var s3              = new AWS.S3({
+                                                        apiVersion: '2006-03-01',
+                                                        params: { Bucket: AWS_bucketName }
+                                                    })
+                            s3.listObjects({Delimiter: '/'}, function(err, data) {
+                                if(err) { console.log(err.message);
+                                }else{ console.log(data); }
+                            });
+
 
                     },
+
 
 
 
