@@ -65,23 +65,11 @@
                 <div class="col-sm-6 col-md-4 col-md-offset-4">
                     <div class="panel panel-default">
                         <div class="panel-body" style="background-color: #f5f5f5;">
-                            <h3 class="text-center">Sign In</h3>
+                            <h3 class="text-center">Sign In from Local Storage</h3>
                             <form class="form-signin">
-                                <input id="inputEmail" value="haydenEventAppUser" type="text" class="form-control" placeholder="Email" required="" autofocus="">
-                                <input id="inputPassword" value="654321" type="password" class="form-control" placeholder="Password" required="">
                                 <button id="btnLogin" class="btn btn-lg btn-primary btn-block" type="button">Sign in</button>
 
-                                <!--Sign in Local Storage-->
                                 <button id="btnLoginLocalStorage" class="btn btn-lg btn-primary btn-block" type="button">Sign in Local Storage</button>
-
-                                <!--File Upload-->
-                                <div class="form-group">
-                                    <label for="exampleInputFile">File input</label>
-                                    <input type="file" id="exampleInputFile">
-                                </div>      
-                                <button id="btnSaveFile" class="btn btn-lg btn-primary btn-block" type="button">Save File</button>
-
-
 
                                 <label class="checkbox pull-left">
                                     <input type="checkbox" value="remember-me">
@@ -151,72 +139,87 @@
 
                 if(cognitoUser != null) {
                     cognitoUser.getSession(function(err, session){
-                        if(err) {
-                            alert(err);
-                            return;
-                        }
+                        if(err) { alert(err); return; }
                         console.log("session validity:"+ session.isValid());
+
+                        var AWS_Region         = $("#awsRegion").val();
+                        var AWS_IdentityPoolId = $("#awsIdentityPoolId").val();
+                        var AWS_idToken        = session.getIdToken().getJwtToken();                
+                        var AWS_Logins         = { 'cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_dntn23wyV' : AWS_idToken }
+
+                        AWS.config.region      = AWS_Region;     
+                        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+                                IdentityPoolId : AWS_IdentityPoolId, 
+                                        Logins : AWS_Logins
+                        });
                     });
+                }else{
+                    alert("Please log back in");
+                    return;
                 }
 
+ 
+
+                //var AWS_bucketName  = 'hayden-event-app';
+                //var s3              = new AWS.S3({
+                //                            apiVersion: '2006-03-01',
+                //                            params: { Bucket: AWS_bucketName }
+                //                        });
+                //
+                //s3.listObjects({Delimiter: '/'}, function(err, data) {
+                //    if(err) { console.log(err.message);
+                //    }else{ console.log(data); }
+                //});
+
+                var AWS_Region         = $("#awsRegion").val();
+                var lambda = new AWS.Lambda({region: AWS_Region, apiVersion: '2015-03-31'});
+                // create JSON object for parameters for invoking Lambda function
+                
+                var sproc_String = "call Event_Insert('First Event','Lorem \"ipsum\" dolor sits amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren','66666666','FirstEventImage.jpq','2017-03-31','654321','South Yarra')";
+                var payload_JSON = {"sproc": sproc_String };
+                var payload_String = JSON.stringify(payload_JSON)
+                
+                // http://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html ref this for synchronous / asynchronous
+                var pullParams = {
+                    FunctionName : 'Event-App-Mysql',
+                    Payload : payload_String,
+                };
+                // create variable to hold data returned by the Lambda function
+                var pullResults;
+
+                lambda.invoke(pullParams, function(error, data) {
+                        //debugger;
+                        if (error) {
+                            prompt(error);
+                        } else {
+                            var pullResults     = JSON.parse(data.Payload);
+                            var sproc_Response  = pullResults.respon[0][0].RESPONSE;
+                            var sproc_EventId   = pullResults.respon[0][0].Event_ID;
+                            console.log(sproc_Response);
+                            console.log(sproc_EventId);
+
+
+                        }
+                });
+
+
             });
-
-
-
-
-
 
             $(document).on("click","#setAwsCredentials", function(){
                 $("#AwsCredentials").toggle();
 
             });
 
-
-
-        
-            $(document).on("click","#btnSaveFile", function(){
-                
-                var files = document.getElementById('exampleInputFile').files
-                if(!files.length) {
-                    return console.log("Please choose a file to upload...");
-                }
-                var file = files[0];
-                var fileName = file.name;
-
-                var AWS_bucketName  = 'hayden-event-app';
-                var s3              = new AWS.S3({
-                                            apiVersion: '2006-03-01',
-                                            params: { Bucket: AWS_bucketName }
-                                        });
-
-                s3.upload({
-                            Key: fileName,
-                            Body: file,
-                            ACL: 'public-read'
-                        }, function(err, data) {
-                            if(err) {
-                                return console.log(err.message);
-                            }
-                            console.log("Successfully uploaded photo");
-                        
-                });
-            });
-
-
-
-
             $(document).on("click","#btnLogin", function(){
 
                 /******* SPECIFY ALL CREDENTIALS FOR THE AWS APP *******************************/
-                
-                var User_Email              = $("#inputEmail").val();
-                var User_Password           = $("#inputPassword").val();
                 var AWS_UserPoolId          = $("#awsUserPoolId").val();        // "ap-southeast-2_dntn23wyV"; // Your user pool id here
-                var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here                
+                var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here 
+                
 
                 /******* SIGN USER IN **********************************************************/
                 var authenticationData      = { Username : User_Email, Password : User_Password };// set username and password here
-                var UserPoolData            = { UserPoolId : AWS_UserPoolId, ClientId   : AWS_ClientId };
+                var UserPoolData                = { UserPoolId : AWS_UserPoolId, ClientId   : AWS_ClientId };
                 var userPool                = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(UserPoolData);      
                 var userData                = { Username : User_Email, Pool : userPool };
                 var authenticationDetails   = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authenticationData);  
@@ -227,10 +230,6 @@
 
                     /******* USER SIGN-IN SUCCESSFUL *******************************************/
                     onSuccess: function (result) {
-                            
-                            console.log("accessToken: "+JSON.stringify(result.accessToken));
-                            console.log("idToken: "+JSON.stringify(result.idToken));
-                            console.log("refreshToken: "+JSON.stringify(result.refreshToken));
 
                             var AWS_idToken             = result.getIdToken().getJwtToken();
 
@@ -240,7 +239,7 @@
                             
                             //  SUPER IMPORTANT! the following Key Value can never be dynamics due to JS constraints (prior  ES6)
                             var AWS_Logins = { 'cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_dntn23wyV' : AWS_idToken }
-                            
+
                             AWS.config.region      = AWS_Region;     
                             AWS.config.credentials = new AWS.CognitoIdentityCredentials({
                                     IdentityPoolId : AWS_IdentityPoolId, 
@@ -250,19 +249,8 @@
 
                             // ACCESS AWS SERVICES HERE....
 
-                            var AWS_bucketName  = 'hayden-event-app';
-                            var s3              = new AWS.S3({
-                                                        apiVersion: '2006-03-01',
-                                                        params: { Bucket: AWS_bucketName }
-                                                    });
-                            // s3.listObjects({Delimiter: '/'}, function(err, data) {
-                            //     if(err) { console.log(err.message);
-                            //     }else{ console.log(data); }
-                            // });
-
 
                     },
-
 
 
 

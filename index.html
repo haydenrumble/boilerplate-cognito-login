@@ -67,11 +67,11 @@
                         <div class="panel-body" style="background-color: #f5f5f5;">
                             <h3 class="text-center">Sign In</h3>
                             <form class="form-signin">
-                                <input id="inputEmail" type="text" class="form-control" placeholder="Email" required="" autofocus="">
-                                <input id="inputPassword" type="password" class="form-control" placeholder="Password" required="">
+                                <input id="inputEmail" value="haydenEventAppUser" type="text" class="form-control" placeholder="Email" required="" autofocus="">
+                                <input id="inputPassword" value="654321" type="password" class="form-control" placeholder="Password" required="">
                                 <button id="btnLogin" class="btn btn-lg btn-primary btn-block" type="button">Sign in</button>
 
-                                <button id="btnLoginLocalStorage" class="btn btn-lg btn-primary btn-block" type="button">Sign in Local Storage</button>
+                                <button id="btnLoginLocalStorage" class="btn btn-lg btn-default btn-block" type="button">Goto Local Storage sign-in</button>
 
                                 <label class="checkbox pull-left">
                                     <input type="checkbox" value="remember-me">
@@ -131,30 +131,17 @@
 
 
             $(document).on("click","#btnLoginLocalStorage", function(){
-                
-                var AWS_UserPoolId          = $("#awsUserPoolId").val(); 
-                var AWS_ClientId            = $("#awsClientId").val();
-                var UserPoolData            = { UserPoolId : AWS_UserPoolId, ClientId : AWS_ClientId }
-
-                var userPool                = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(UserPoolData);
-                var cognitoUser             = userPool.getCurrentUser();
-
-                if(cognitoUser != null) {
-                    cognitoUser.getSession(function(err, session){
-                        if(err) {
-                            alert(err);
-                            return;
-                        }
-                        console.log("session validity:"+ session.isValid());
-                    });
-                }
-
+                window.location.href = 'login-local-storage.html';
             });
+
+
 
             $(document).on("click","#setAwsCredentials", function(){
                 $("#AwsCredentials").toggle();
 
             });
+
+
 
             $(document).on("click","#btnLogin", function(){
 
@@ -162,12 +149,8 @@
                 
                 var User_Email              = $("#inputEmail").val();
                 var User_Password           = $("#inputPassword").val();
-                
-                var AWS_Region              = $("#awsRegion").val();            // "ap-southeast-2";
                 var AWS_UserPoolId          = $("#awsUserPoolId").val();        // "ap-southeast-2_dntn23wyV"; // Your user pool id here
-                var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here
-                var AWS_IdentityPoolId      = $("#awsIdentityPoolId").val();    // "ap-southeast-2:631003c9-f817-42c8-a279-52c457cade89"; // your identity pool id here
-                var AWS_IdentityPoolIdKey   = 'cognito-idp.'+AWS_Region+'.amazonaws.com/'+AWS_UserPoolId; // Change the key below according to the specific region your user pool is in. 'cognito-idp.<region>.amazonaws.com/<YOUR_USER_POOL_ID>'
+                var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here 
                 
 
                 /******* SIGN USER IN **********************************************************/
@@ -183,6 +166,10 @@
 
                     /******* USER SIGN-IN SUCCESSFUL *******************************************/
                     onSuccess: function (result) {
+
+                            console.log("accessToken: "+JSON.stringify(result.accessToken));
+                            console.log("idToken: "+JSON.stringify(result.idToken));
+                            console.log("refreshToken: "+JSON.stringify(result.refreshToken));
 
                             var AWS_idToken             = result.getIdToken().getJwtToken();
 
