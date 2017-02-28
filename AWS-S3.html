@@ -71,7 +71,17 @@
                                 <input id="inputPassword" value="654321" type="password" class="form-control" placeholder="Password" required="">
                                 <button id="btnLogin" class="btn btn-lg btn-primary btn-block" type="button">Sign in</button>
 
-                                <button id="btnLoginLocalStorage" class="btn btn-lg btn-default btn-block" type="button">Goto Local Storage sign-in</button>
+                                <!--Sign in Local Storage-->
+                                <button id="btnLoginLocalStorage" class="btn btn-lg btn-primary btn-block" type="button">Sign in Local Storage</button>
+
+                                <!--File Upload-->
+                                <div class="form-group">
+                                    <label for="exampleInputFile">File input</label>
+                                    <input type="file" id="exampleInputFile">
+                                </div>      
+                                <button id="btnSaveFile" class="btn btn-lg btn-primary btn-block" type="button">Save File</button>
+
+
 
                                 <label class="checkbox pull-left">
                                     <input type="checkbox" value="remember-me">
@@ -131,8 +141,28 @@
 
 
             $(document).on("click","#btnLoginLocalStorage", function(){
-                window.location.href = 'login-local-storage.html';
+                
+                var AWS_UserPoolId          = $("#awsUserPoolId").val(); 
+                var AWS_ClientId            = $("#awsClientId").val();
+                var UserPoolData            = { UserPoolId : AWS_UserPoolId, ClientId : AWS_ClientId }
+
+                var userPool                = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(UserPoolData);
+                var cognitoUser             = userPool.getCurrentUser();
+
+                if(cognitoUser != null) {
+                    cognitoUser.getSession(function(err, session){
+                        if(err) {
+                            alert(err);
+                            return;
+                        }
+                        console.log("session validity:"+ session.isValid());
+                    });
+                }
+
             });
+
+
+
 
 
 
@@ -143,6 +173,38 @@
 
 
 
+        
+            $(document).on("click","#btnSaveFile", function(){
+                
+                var files = document.getElementById('exampleInputFile').files
+                if(!files.length) {
+                    return console.log("Please choose a file to upload...");
+                }
+                var file = files[0];
+                var fileName = file.name;
+
+                var AWS_bucketName  = 'hayden-event-app';
+                var s3              = new AWS.S3({
+                                            apiVersion: '2006-03-01',
+                                            params: { Bucket: AWS_bucketName }
+                                        });
+
+                s3.upload({
+                            Key: fileName,
+                            Body: file,
+                            ACL: 'public-read'
+                        }, function(err, data) {
+                            if(err) {
+                                return console.log(err.message);
+                            }
+                            console.log("Successfully uploaded photo");
+                        
+                });
+            });
+
+
+
+
             $(document).on("click","#btnLogin", function(){
 
                 /******* SPECIFY ALL CREDENTIALS FOR THE AWS APP *******************************/
@@ -150,12 +212,11 @@
                 var User_Email              = $("#inputEmail").val();
                 var User_Password           = $("#inputPassword").val();
                 var AWS_UserPoolId          = $("#awsUserPoolId").val();        // "ap-southeast-2_dntn23wyV"; // Your user pool id here
-                var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here 
-                
+                var AWS_ClientId            = $("#awsClientId").val();          // "5psld1u7cb8qbtqhrqc6um77qc"; // Your client id here                
 
                 /******* SIGN USER IN **********************************************************/
                 var authenticationData      = { Username : User_Email, Password : User_Password };// set username and password here
-                var UserPoolData                = { UserPoolId : AWS_UserPoolId, ClientId   : AWS_ClientId };
+                var UserPoolData            = { UserPoolId : AWS_UserPoolId, ClientId   : AWS_ClientId };
                 var userPool                = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(UserPoolData);      
                 var userData                = { Username : User_Email, Pool : userPool };
                 var authenticationDetails   = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authenticationData);  
@@ -166,7 +227,7 @@
 
                     /******* USER SIGN-IN SUCCESSFUL *******************************************/
                     onSuccess: function (result) {
-
+                            
                             console.log("accessToken: "+JSON.stringify(result.accessToken));
                             console.log("idToken: "+JSON.stringify(result.idToken));
                             console.log("refreshToken: "+JSON.stringify(result.refreshToken));
@@ -179,7 +240,7 @@
                             
                             //  SUPER IMPORTANT! the following Key Value can never be dynamics due to JS constraints (prior  ES6)
                             var AWS_Logins = { 'cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_dntn23wyV' : AWS_idToken }
-
+                            
                             AWS.config.region      = AWS_Region;     
                             AWS.config.credentials = new AWS.CognitoIdentityCredentials({
                                     IdentityPoolId : AWS_IdentityPoolId, 
@@ -189,8 +250,19 @@
 
                             // ACCESS AWS SERVICES HERE....
 
+                            var AWS_bucketName  = 'hayden-event-app';
+                            var s3              = new AWS.S3({
+                                                        apiVersion: '2006-03-01',
+                                                        params: { Bucket: AWS_bucketName }
+                                                    });
+                            // s3.listObjects({Delimiter: '/'}, function(err, data) {
+                            //     if(err) { console.log(err.message);
+                            //     }else{ console.log(data); }
+                            // });
+
 
                     },
+
 
 
 
