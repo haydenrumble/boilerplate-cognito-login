@@ -190,7 +190,24 @@
 
 
                             // ACCESS AWS SERVICES HERE....
+                            AWS.config.credentials.get(function(){
+                                    var sprocString     = "Select 123 as Test;"
+                                    var AWS_Region      = $("#awsRegion").val();
+                                    var lambda          = new AWS.Lambda({region: AWS_Region, apiVersion: '2015-03-31'});    
+                                    var payload_JSON    = {"sproc": sprocString }; // create JSON object for parameters for invoking Lambda function 
+                                    var payload_String  = JSON.stringify(payload_JSON)      
+                                    var pullParams      = { FunctionName : 'Event-App-Mysql', Payload : payload_String }; // http://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html ref this for synchronous / asynchronous
+                                    var pullResults; // create variable to hold data returned by the Lambda function
 
+                                    lambda.invoke(pullParams, function(error, data) {
+                        
+                                            if (error) { console.log(error);
+                                            } else {
+                                                var pullResults     = JSON.parse(data.Payload);
+                                                console.log(pullResults.respon[0]);
+                                            } // end if
+                                    }); // end lambda.invoke
+                            }); // end credentials.get
 
                     },
 
